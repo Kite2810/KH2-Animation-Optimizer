@@ -1,15 +1,15 @@
 bl_info = {
     "name": "KH2 Animation Optimizer",
     "author": "Kité",
-    "version": (1, 1),
+    "version": (1, 2),
     "blender": (3, 0, 0),
     "location": "3D Viewport > Sidebar > KH2 Anb Optimizer",
-    "description": "Moves all Keyframes to evenly spaced intervals (1, 1.5, 2, 2.5, etc.)",
+    "description": "Moves all Keyframes to evenly spaced intervals (1, 1.5, 2, 2.5, etc.) and export as FBX",
     "category": "Animation",
 }
 
 import bpy
-from bpy.props import FloatProperty, IntProperty
+from bpy.props import FloatProperty, IntProperty, StringProperty
 from bpy.types import Operator, Panel, PropertyGroup
 
 
@@ -29,6 +29,18 @@ class EvenlyStaggerProperties(PropertyGroup):
         default=60,
         min=1,
         description="Frame Rate"
+    )
+    export_path: StringProperty(
+        name="Export Path",
+        default="//animation.fbx",
+        description="Path where the FBX file will be saved",
+        subtype='FILE_PATH'
+    )
+    sample_rate: FloatProperty(
+        name="Sample Rate",
+        default=1.0,
+        min=0.01,
+        description="Sample rate for FBX export"
     )
 
 
@@ -60,6 +72,31 @@ class ANIM_OT_evenly_stagger_keyframes(Operator):
         return {'FINISHED'}
 
 
+class ANIM_OT_export_fbx(Operator):
+    bl_idname = "anim.export_fbx_optimized"
+    bl_label = "Export as FBX"
+    bl_description = "Export animation as FBX with optimized settings"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context):
+        props = context.scene.evenly_stagger_props
+        
+        try:
+            bpy.ops.export_scene.fbx(
+                filepath=bpy.path.abspath(props.export_path),
+                use_selection=False,
+                bake_anim_use_nla_strips=False,
+                bake_anim_use_all_bones=False,
+                add_leaf_bones=False,
+                bake_anim_simplify_factor=props.sample_rate
+            )
+            self.report({'INFO'}, f"FBX exported to {props.export_path}")
+            return {'FINISHED'}
+        except Exception as e:
+            self.report({'ERROR'}, f"Export failed: {str(e)}")
+            return {'CANCELLED'}
+
+
 class ANIM_PT_evenly_stagger_panel(Panel):
     bl_label = "KH2 Animation Optimizer"
     bl_idname = "ANIM_PT_evenly_stagger_panel"
@@ -71,16 +108,27 @@ class ANIM_PT_evenly_stagger_panel(Panel):
         layout = self.layout
         props = context.scene.evenly_stagger_props
 
-        layout.prop(props, "start")
-        layout.prop(props, "spacing")
-        layout.prop(props, "fps")
-        layout.operator("anim.evenly_stagger_keyframes", icon='TIME')
+        box = layout.box()
+        box.label(text="Keyframe Settings:", icon='KEYFRAME')
+        box.prop(props, "start")
+        box.prop(props, "spacing")
+        box.prop(props, "fps")
+        box.operator("anim.evenly_stagger_keyframes", icon='TIME')
+        
+        layout.separator()
+        
+        box = layout.box()
+        box.label(text="FBX Export:", icon='EXPORT')
+        box.prop(props, "export_path")
+        box.prop(props, "sample_rate")
+        box.operator("anim.export_fbx_optimized", icon='FILE_TICK')
 
 
 # Registrierung
 classes = (
     EvenlyStaggerProperties,
     ANIM_OT_evenly_stagger_keyframes,
+    ANIM_OT_export_fbx,
     ANIM_PT_evenly_stagger_panel,
 )
 
