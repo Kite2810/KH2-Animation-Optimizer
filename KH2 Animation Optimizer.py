@@ -40,7 +40,7 @@ class EvenlyStaggerProperties(PropertyGroup):
         name="Sample Rate",
         default=1.0,
         min=0.01,
-        description="Sample rate for FBX export"
+        description="Sampling step for FBX export (bake every N frames)"
     )
 
 
@@ -88,7 +88,8 @@ class ANIM_OT_export_fbx(Operator):
                 bake_anim_use_nla_strips=False,
                 bake_anim_use_all_bones=False,
                 add_leaf_bones=False,
-                bake_anim_simplify_factor=props.sample_rate
+                bake_anim_step=props.sample_rate,
+                bake_anim_simplify_factor=0.0
             )
             self.report({'INFO'}, f"FBX exported to {props.export_path}")
             return {'FINISHED'}
